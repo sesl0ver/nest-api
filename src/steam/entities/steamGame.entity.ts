@@ -11,4 +11,5 @@ export class steamGame {
     genres: string[];
     screenshots: string[];
     movies: string[];
+    background: string
 }

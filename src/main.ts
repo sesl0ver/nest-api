@@ -4,6 +4,11 @@ import {ValidationPipe} from "@nestjs/common";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: ['https://sesl0ver.dev', 'http://localhost:3080'],
+    credentials: true,
+    // exposedHeaders: ['Authorization'],
+  });
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
