@@ -3,7 +3,7 @@ import {Pool, QueryResult} from "pg";
 
 export class Postgres {
     private client: Pool;
-    private queryResult: QueryResult
+    private queryResult: QueryResult;
     constructor () {
         this.connect();
     }
