@@ -1,6 +1,6 @@
 import {Controller, Get, Post, Param} from '@nestjs/common';
-import {steamGame} from "./entities/steamGame.entity";
 import {SteamService} from "./steam.service";
+import {steamGame} from "./entities/steamGame.entity";
 
 @Controller('steam')
 export class SteamController {

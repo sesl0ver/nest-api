@@ -9,10 +9,12 @@ export class SteamService {
         timeout: 30000
     });
     private pg: Postgres = new Postgres();
+    private gameColumn = ['app_id', 'title', 'short_description', 'detailed_description', 'about_the_game',
+        'header_image','release_date', 'developers', 'publishers', 'genres', 'screenshots', 'movies', 'background']
 
     async getSteamGames(limit: number = 20): Promise<steamGame[]> {
         try {
-            await this.pg.query('SELECT app_id, title, short_description, detailed_description, about_the_game, header_image, release_date, developers, publishers, genres, screenshots, movies, background FROM games ORDER BY app_id LIMIT $1', [limit]);
+            await this.pg.query(`SELECT ${this.gameColumn.join(',')} FROM games ORDER BY app_id LIMIT $1`, [limit]);
         } catch (e) {
             throw new BadRequestException(e.message);
         }
@@ -20,9 +22,9 @@ export class SteamService {
         return result.rows;
     }
 
-    async getSteamGame(appid: number) {
+    async getSteamGame(appid: number): Promise<steamGame> {
         try {
-            await this.pg.query('SELECT * FROM games WHERE app_id = $1', [appid]);
+            await this.pg.query(`SELECT ${this.gameColumn.join(',')} FROM games WHERE app_id = $1`, [appid]);
         } catch (e) {
             throw new BadRequestException(e.message);
         }
@@ -49,7 +51,7 @@ export class SteamService {
         };
     }
 
-    async createSteamGame (appid: number) {
+    async createSteamGame (appid: number): Promise<{ rowCount: number, rows: steamGame[] }> {
         const response: AxiosResponse = await this.axiosInstance.get(`https://store.steampowered.com/api/appdetails?appids=${appid}&l=koreana&cc=kr`);
         const data = response.data[appid]?.data;
         if (! data || response.data[appid]['success'] !== true) {
@@ -65,7 +67,7 @@ export class SteamService {
         if (data.type !== 'game') {
             throw new BadRequestException(`Only game types on Steam can be registered. (${appid})`);
         }
-        await this.pg.query('INSERT INTO games (app_id, title, short_description, detailed_description, about_the_game, header_image, release_date, developers, publishers, genres, screenshots, movies, background) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+        await this.pg.query(`INSERT INTO games (${this.gameColumn.join(',')}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
             [
                 data.steam_appid, data.name, data.short_description, data.detailed_description, data.about_the_game, data.header_image,
                 data.release_date['date'],
