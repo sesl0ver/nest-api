@@ -37,9 +37,6 @@ export class gameData {
     @IsString({ each: true })
     readonly movies: string[];
 
-    @IsString()
-    readonly background: string;
-
     @IsOptional()
     readonly create_date: string;
 }

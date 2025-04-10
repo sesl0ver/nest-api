@@ -1,5 +1,5 @@
-import {pgConfig} from "../config/config.json";
 import {Pool, QueryResult} from "pg";
+import { config } from "dotenv";
 
 export class Postgres {
     private client: Pool;
@@ -9,7 +9,14 @@ export class Postgres {
     }
 
     private async connect () {
-        this.client = new Pool(pgConfig);
+        config()
+        this.client = new Pool({
+            host: process.env.REACT_APP_PG_HOST,
+            port: Number(process.env.REACT_APP_PG_PORT),
+            user: process.env.REACT_APP_PG_USER,
+            password: process.env.REACT_APP_PG_PASSWORD,
+            database: process.env.REACT_APP_PG_DATABASE
+        });
         await this.client.connect();
     }
 

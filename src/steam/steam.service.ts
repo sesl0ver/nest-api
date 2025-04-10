@@ -9,12 +9,12 @@ export class SteamService {
         timeout: 30000
     });
     private pg: Postgres = new Postgres();
-    private gameColumn = ['app_id', 'title', 'short_description', 'detailed_description', 'about_the_game',
-        'header_image','release_date', 'developers', 'publishers', 'genres', 'screenshots', 'movies', 'background']
+    private gamesColumn = ['app_id', 'title', 'short_description', 'detailed_description', 'about_the_game',
+        'header_image','release_date', 'developers', 'publishers', 'genres', 'screenshots', 'screenshots_full', 'movies', 'movies_full'];
 
     async getSteamGames(limit: number = 20): Promise<steamGame[]> {
         try {
-            await this.pg.query(`SELECT ${this.gameColumn.join(',')} FROM games ORDER BY app_id LIMIT $1`, [limit]);
+            await this.pg.query(`SELECT ${this.gamesColumn.join(',')} FROM games ORDER BY app_id DESC LIMIT $1`, [limit]);
         } catch (e) {
             throw new BadRequestException(e.message);
         }
@@ -24,7 +24,7 @@ export class SteamService {
 
     async getSteamGame(appid: number): Promise<steamGame> {
         try {
-            await this.pg.query(`SELECT ${this.gameColumn.join(',')} FROM games WHERE app_id = $1`, [appid]);
+            await this.pg.query(`SELECT ${this.gamesColumn.join(',')} FROM games WHERE app_id = $1`, [appid]);
         } catch (e) {
             throw new BadRequestException(e.message);
         }
@@ -46,8 +46,9 @@ export class SteamService {
             publishers: data.publishers,
             genres: data.genres,
             screenshots: data.screenshots,
+            screenshots_full: data.screenshots_full,
             movies: data.movies,
-            background: data.background,
+            movies_full: data.movies_full
         };
     }
 
@@ -67,7 +68,7 @@ export class SteamService {
         if (data.type !== 'game') {
             throw new BadRequestException(`Only game types on Steam can be registered. (${appid})`);
         }
-        await this.pg.query(`INSERT INTO games (${this.gameColumn.join(',')}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        await this.pg.query(`INSERT INTO games (${this.gamesColumn.join(',')}) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING ${this.gamesColumn.join(',')}`,
             [
                 data.steam_appid, data.name, data.short_description, data.detailed_description, data.about_the_game, data.header_image,
                 data.release_date['date'],
@@ -75,10 +76,11 @@ export class SteamService {
                 data.publishers.map((d: string) => d),
                 data.genres.map((d: string) => d['description']),
                 data.screenshots.map((d: string) => d['path_thumbnail']),
+                data.screenshots.map((d: string) => d['path_full']),
                 data.movies.map((d: string) => d['mp4'][480]),
-                data.background,
+                data.movies.map((d: string) => d['mp4']['max'])
             ]);
-        await this.pg.query('SELECT * FROM games WHERE app_id = $1', [appid]);
+        // await this.pg.query('SELECT * FROM games WHERE app_id = $1', [appid]);
         return this.pg.getRows();
     }
 }

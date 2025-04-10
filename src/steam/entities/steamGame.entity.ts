@@ -10,6 +10,7 @@ export class steamGame {
     publishers: string[];
     genres: string[];
     screenshots: string[];
+    screenshots_full: string[];
     movies: string[];
-    background: string
+    movies_full: string[];
 }
