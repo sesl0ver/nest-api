@@ -3,7 +3,8 @@ import {SteamService} from './steam.service';
 import {SteamController} from "./steam.controller";
 
 @Module({
+    imports: [],
     controllers: [SteamController],
-    providers: [SteamService]
+    providers: [SteamService],
 })
 export class SteamModule {}

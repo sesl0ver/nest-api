@@ -1,6 +1,6 @@
-import {Controller, Get, Post, Param} from '@nestjs/common';
+import {Controller, Get, Post, Param, Req } from '@nestjs/common';
 import {SteamService} from "./steam.service";
-import {steamGame} from "./entities/steamGame.entity";
+import {steamGame} from "./entities/steam.entity";
 
 @Controller('steam')
 export class SteamController {
@@ -8,14 +8,14 @@ export class SteamController {
     }
 
     @Get()
-    async getSteamGames(): Promise<steamGame[]> {
+    async getSteamGames():Promise<steamGame[]> {
         return this.SteamService.getSteamGames();
     }
 
-    @Get(':appid')
+    /*@Get(':appid')
     async getSteamGame(@Param('appid') appid: number): Promise<steamGame> {
         return this.SteamService.getSteamGame(appid);
-    }
+    }*/
 
     @Post(':appid')
     async createSteamGame(@Param('appid') appid: number): Promise<void> {

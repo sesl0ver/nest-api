@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("DATABASE_SHADOW")
+}
+
+model games {
+  app_id               Int       @id
+  title                String    @db.VarChar
+  short_description    String
+  detailed_description String?
+  about_the_game       String?
+  header_image         String    @db.VarChar
+  capsule_image        String    @db.VarChar
+  release_date         String    @db.VarChar
+  developers           String[]  @db.VarChar
+  publishers           String[]  @db.VarChar
+  genres               String[]  @db.VarChar
+  screenshots          String[]
+  screenshots_full     String[]
+  movies               String[]
+  movies_full          String[]
+  create_date          DateTime  @default(now()) @db.Timestamptz
+  update_date          DateTime? @db.Timestamptz
+}

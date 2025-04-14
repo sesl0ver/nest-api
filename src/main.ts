@@ -8,7 +8,7 @@ async function bootstrap() {
   config()
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: [process.env.REACT_APP_CROS_HOST],
+    origin: [process.env.NEST_API_CROS_HOST],
     credentials: true,
     // exposedHeaders: ['Authorization'],
   });
@@ -17,6 +17,6 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
     transform: true
   }));
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3333);
 }
 bootstrap().then();
