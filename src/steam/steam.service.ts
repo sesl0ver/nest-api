@@ -26,24 +26,29 @@ export class SteamService {
         });
     }
 
-    /*async getSteamGame(appid: number): Promise<steamGame> {
-        try {
-            await this.pg.query(`SELECT ${this.gamesColumn.join(',')} FROM games WHERE app_id = $1`, [appid]);
-        } catch (e) {
-            throw new BadRequestException(e.message);
-        }
-        let result = this.pg.getRows();
-        if (result.rowCount < 1) {
-            // result = await this.createSteamGame(appid);
+    async getSteamGame(appid: number): Promise<steamGame> {
+        const data: steamGame | null = await this.prisma.games.findUnique({
+            where: { app_id: appid },
+            select: {
+                app_id: true,
+                title: true,
+                short_description: true,
+                capsule_image: true,
+                header_image: true,
+                developers: true,
+                publishers: true,
+                genres: true,
+                release_date: true,
+            }
+        });
+        if (! data) {
             throw new NotFoundException(`This game is not registered. (${appid})`);
         }
-        const data = result.rows[0];
         return {
             app_id: data.app_id,
             title: data.title,
             short_description: data.short_description,
-            detailed_description: data.detailed_description,
-            about_the_game: data.about_the_game,
+            capsule_image: data.capsule_image,
             header_image: data.header_image,
             release_date: data.release_date,
             developers: data.developers,
@@ -53,10 +58,12 @@ export class SteamService {
             screenshots_full: data.screenshots_full,
             movies: data.movies,
             movies_full: data.movies_full
-        };
-    }*/
+        }
+    }
 
     async createSteamGame (appid: number): Promise<void> {
+        // TODO 이미 등록되어 있는 게임인지 먼저 확인.
+
         const response = await this.axiosService.get(`https://store.steampowered.com/api/appdetails?appids=${appid}&l=koreana&cc=kr`);
         const { data } = response.data[appid];
         if (! data || response.data[appid]['success'] !== true) {

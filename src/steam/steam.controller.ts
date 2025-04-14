@@ -12,10 +12,10 @@ export class SteamController {
         return this.SteamService.getSteamGames();
     }
 
-    /*@Get(':appid')
+    @Get(':appid')
     async getSteamGame(@Param('appid') appid: number): Promise<steamGame> {
         return this.SteamService.getSteamGame(appid);
-    }*/
+    }
 
     @Post(':appid')
     async createSteamGame(@Param('appid') appid: number): Promise<void> {
