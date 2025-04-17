@@ -1,55 +1,60 @@
 import {Injectable, NotFoundException} from '@nestjs/common';
-import {RedisService} from "../common/redis.service";
-import {AxiosService} from "../common/axios.service";
+import {RedisService} from "./redis.service";
+import {AxiosService} from "./axios.service";
 import { config } from "dotenv";
-import {priceOverview} from "../steam/entities/steam.entity";
+import {priceOverview} from "../entities/game.entity";
 
 @Injectable()
 export class DealService {
+    private apiUrl = "https://api.isthereanydeal.com/";
     constructor(private readonly redis: RedisService, private readonly AxiosService: AxiosService) {
         config();
     }
 
-    async findDealID (appid: string): Promise<string | boolean> {
-        const res = await this.AxiosService.get(`https://api.isthereanydeal.com/games/lookup/v1?key=${process.env.NEST_API_DEAL_KEY}&appid=${appid}`);
+    async fetchDealID (appid: string): Promise<string | boolean> {
+        const res = await this.AxiosService.get(`${this.apiUrl}/games/lookup/v1?key=${process.env.NEST_API_DEAL_KEY}&appid=${appid}`);
         if (! res || res?.data?.found !== true) {
             return false;
         }
         return res.data.game.id;
     }
 
-    async getPriceOverView(appId: string): Promise<{ success: boolean, data?: priceOverview | null }> {
+    async fetchPriceOverview(appId: string): Promise<priceOverview> {
         const appKey = `steam:deal:${appId}`;
         let dealData = await this.redis.get(appKey);
         if (! dealData) {
-            const dealId = await this.findDealID(appId);
+            const dealId = await this.fetchDealID(appId);
             if (! dealId) {
                 return {
-                    success: false
+                    success: false,
+                    data: null
                 };
             }
-            const dealRes = await this.AxiosService.post(`https://api.isthereanydeal.com/games/overview/v2?key=${process.env.NEST_API_DEAL_KEY}&country=KR&shops=61`,[dealId]);
-            dealData = dealRes.data;
-            if (! dealData) {
+            const dealRes = await this.AxiosService.post(`${this.apiUrl}/games/overview/v2?key=${process.env.NEST_API_DEAL_KEY}&country=KR&shops=61`,[dealId]);
+            if (! dealRes?.data) {
                 return {
-                    success: false
+                    success: false,
+                    data: null
                 };
             }
-            await this.redis.set(appKey, JSON.stringify(dealRes.data), 3600); // 한시간마다 갱신
+            dealData = dealRes.data['prices'];
+            await this.redis.set(appKey, JSON.stringify(dealData), 43200); // 12시간 마다 갱신
         } else {
             dealData = JSON.parse(dealData);
             if (! dealData) {
                 return {
-                    success: false
+                    success: false,
+                    data: null
                 };
             }
         }
-        if (dealData['prices'].length < 1) {
+        if (!dealData || dealData?.length < 1) {
             return {
-                success: false
+                success: false,
+                data: null
             }
         }
-        const price = dealData['prices'][0];
+        const price = dealData[0];
         return {
             success: true,
             data: (! price) ? null : {
@@ -58,7 +63,7 @@ export class DealService {
                 lowCut: price?.['lowest']['cut'] ?? 0,
                 currentPrice: price?.['current']['price']['amountInt'] ?? 0,
                 regularPrice: price?.['current']['regular']['amountInt'] ?? 0,
-                cut: price?.['current']['cut'] ?? 0
+                cut: price?.['current']['cut'] ?? 0,
             }
         };
     }

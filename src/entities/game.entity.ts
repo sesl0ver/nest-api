@@ -1,5 +1,6 @@
 export interface steamGame {
     app_id: number;
+    fullgame?: number;
     title: string;
     short_description: string;
     detailed_description?: string | null;
@@ -15,9 +16,15 @@ export interface steamGame {
     movies?: string[] | null;
     movies_full?: string[] | null;
     create_date?: string;
+    price?: price | null;
 }
 
 export interface priceOverview {
+    success: boolean;
+    data: price | null
+}
+
+export interface price {
     id: string;
     lowPrice: number; // 역대 최저가
     lowCut: number; // 역대 할인율

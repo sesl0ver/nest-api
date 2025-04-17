@@ -1,14 +1,16 @@
-import {Injectable, NotFoundException, BadRequestException} from '@nestjs/common';
+import {Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
-import {steamGame} from "./entities/steam.entity";
-import {AxiosService} from "../common/axios.service";
+import {steamGame, priceOverview, price} from "../entities/game.entity";
+import {SteamService} from "../common/steam.service";
+import {DealService} from "../common/deal.service";
 
 @Injectable()
-export class SteamService {
-    constructor(private prisma: PrismaService, private axiosService: AxiosService) {
+export class GamesService {
+    constructor(private prisma: PrismaService, private readonly steamService: SteamService,
+                private readonly dealService: DealService) {
     }
 
-    async getSteamGames(limit: number = 20): Promise<steamGame[]> {
+    async getGames(limit: number = 20): Promise<steamGame[]> {
         return this.prisma.games.findMany({
             select: {
                 app_id: true,
@@ -26,13 +28,14 @@ export class SteamService {
         });
     }
 
-    async getSteamGame(appid: number): Promise<steamGame> {
+    async getGame(appid: number): Promise<steamGame> {
         const data: steamGame | null = await this.prisma.games.findUnique({
             where: { app_id: appid },
             select: {
                 app_id: true,
                 title: true,
                 short_description: true,
+                screenshots: true,
                 capsule_image: true,
                 header_image: true,
                 developers: true,
@@ -61,27 +64,29 @@ export class SteamService {
         }
     }
 
-    async createSteamGame (appid: number): Promise<void> {
-        // TODO 이미 등록되어 있는 게임인지 먼저 확인.
-
-        const response = await this.axiosService.get(`https://store.steampowered.com/api/appdetails?appids=${appid}&l=koreana&cc=kr`);
-        const { data } = response.data[appid];
-        if (! data || response.data[appid]['success'] !== true) {
-            throw new NotFoundException(`Appid ${appid} game not found.`);
-        }
-        if (Array.isArray(data.content_descriptors['ids'])) {
-            for (let o of data.content_descriptors['ids']) {
-                if ([3, 4].includes(o)) {
-                    throw new BadRequestException(`Adult games cannot be registered. (${appid})`);
-                }
-            }
-        }
-        if (data.type !== 'game') {
-            throw new BadRequestException(`Only game types on Steam can be registered. (${appid})`);
-        }
-        const res: steamGame = { ...data, app_id: data.steam_appid, title: data.name };
-        await this.prisma.games.create({
-            data: {
+    async createGame (appid: number): Promise<void> {
+        const res = await this.steamService.fetchDetails(appid);
+        await this.prisma.games.upsert({
+            where: {
+                app_id: res.app_id
+            },
+            update: {
+                title: res.title,
+                short_description: res.short_description,
+                detailed_description: res.detailed_description,
+                capsule_image: res.capsule_image,
+                about_the_game: res.about_the_game,
+                header_image: res.header_image,
+                release_date: res.release_date['date'],
+                developers: res.developers.map((d: string) => d),
+                publishers: res?.publishers?.map((d: string) => d) ?? [],
+                genres: res.genres.map((d: string) => d['description']),
+                screenshots: res?.screenshots?.map((d: string) => d['path_thumbnail']) ?? [],
+                screenshots_full: res?.screenshots?.map((d: string) => d['path_full']) ?? [],
+                movies: res?.movies?.map((d: string) => d['mp4'][480]) ?? [],
+                movies_full: res?.movies?.map((d: string) => d['mp4']['max']) ?? []
+            },
+            create: {
                 app_id: res.app_id,
                 title: res.title,
                 short_description: res.short_description,
@@ -99,5 +104,9 @@ export class SteamService {
                 movies_full: res?.movies?.map((d: string) => d['mp4']['max']) ?? []
             }
         });
+    }
+
+    async getPrice (appid: number): Promise<priceOverview> {
+        return this.dealService.fetchPriceOverview(String(appid));
     }
 }

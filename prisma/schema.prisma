@@ -15,6 +15,15 @@ datasource db {
   shadowDatabaseUrl = env("DATABASE_SHADOW")
 }
 
+model account {
+  account_id Int             @id @default(autoincrement())
+  username   String          @unique
+  password   String
+  posts      games_post[]
+  comments   games_comment[]
+  created_date  DateTime        @default(now())
+}
+
 model games {
   app_id               Int       @id
   title                String    @db.VarChar
@@ -32,5 +41,38 @@ model games {
   movies               String[]
   movies_full          String[]
   create_date          DateTime  @default(now()) @db.Timestamptz
-  update_date          DateTime? @db.Timestamptz
+  update_date          DateTime? @db.Timestamptz @updatedAt
+  games_post           games_post[]
+}
+
+enum PostType {
+  GUIDE
+  REVIEW
+  TIP
+  QUESTION
+}
+
+model games_post {
+  post_id      Int             @id @default(autoincrement())
+  title        String
+  contents     String
+  post_type    PostType        @default(TIP)
+  author       account?        @relation(fields: [author_id], references: [account_id])
+  author_id    Int
+  game         games?          @relation(fields: [app_id], references: [app_id])
+  app_id       Int
+  comments     games_comment[]
+  created_date DateTime        @db.Timestamptz @default(now())
+  updated_date DateTime        @db.Timestamptz @updatedAt
+}
+
+model games_comment {
+  comment_id   Int        @id @default(autoincrement())
+  contents     String
+  author       account    @relation(fields: [author_id], references: [account_id])
+  author_id    Int
+  games_post   games_post @relation(fields: [post_id], references: [post_id])
+  post_id      Int
+  created_date DateTime   @db.Timestamptz @default(now())
+  updated_date DateTime   @db.Timestamptz @updatedAt
 }
