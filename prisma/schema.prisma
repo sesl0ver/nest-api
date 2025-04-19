@@ -46,10 +46,12 @@ model games {
 }
 
 enum PostType {
+  NOTICE
   GUIDE
   REVIEW
   TIP
   QUESTION
+  TALK
 }
 
 model games_post {
@@ -64,6 +66,7 @@ model games_post {
   comments     games_comment[]
   created_date DateTime        @db.Timestamptz @default(now())
   updated_date DateTime        @db.Timestamptz @updatedAt
+  files        uploaded_file[] @relation("PostFiles") // 게시물에 첨부된 파일
 }
 
 model games_comment {
@@ -75,4 +78,16 @@ model games_comment {
   post_id      Int
   created_date DateTime   @db.Timestamptz @default(now())
   updated_date DateTime   @db.Timestamptz @updatedAt
+}
+
+model uploaded_file {
+  file_id       Int          @id @default(autoincrement())
+  post_id       Int?         // 파일이 첨부된 게시물의 ID
+  post          games_post?  @relation("PostFiles", fields: [post_id], references: [post_id])
+  original_name String
+  filename      String
+  path          String
+  size          Int
+  mime_type     String
+  created_date  DateTime     @db.Timestamptz @default(now())
 }

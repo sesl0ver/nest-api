@@ -1,8 +1,10 @@
 import {Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
-import {steamGame, priceOverview, price} from "../entities/game.entity";
+import {steamGame, priceOverview, steamGamePage} from "../entities/game.entity";
 import {SteamService} from "../common/steam.service";
 import {DealService} from "../common/deal.service";
+import {Decimal} from "decimal.js";
+
 
 @Injectable()
 export class GamesService {
@@ -10,8 +12,13 @@ export class GamesService {
                 private readonly dealService: DealService) {
     }
 
-    async getGames(limit: number = 20): Promise<steamGame[]> {
-        return this.prisma.games.findMany({
+    async getGames(page: string): Promise<steamGamePage> {
+        let _page = new Decimal(page ?? '1')
+        _page = (_page.isInteger()) ? _page : Decimal(1);
+        const pageSize = 9;
+        const skip = (_page.toNumber() - 1) * pageSize;
+        const totalCount = await this.prisma.games.count();
+        const games = await this.prisma.games.findMany({
             select: {
                 app_id: true,
                 title: true,
@@ -23,9 +30,17 @@ export class GamesService {
                 genres: true,
                 release_date: true,
             },
-            skip: 0, // offset
-            take: limit,
+            skip: skip, // offset
+            take: pageSize,
         });
+
+        return {
+            totalCount: totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            currentPage: _page.toNumber(),
+            pageSize: pageSize,
+            games: games
+        }
     }
 
     async getGame(appid: number): Promise<steamGame> {

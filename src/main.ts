@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import {ValidationPipe} from "@nestjs/common";
 import * as process from "node:process";
+import * as bodyParser from 'body-parser';
 import { config } from "dotenv";
 
 async function bootstrap() {
@@ -17,6 +18,10 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
     transform: true
   }));
+
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
   await app.listen(process.env.PORT ?? 3333);
 }
 bootstrap().then();

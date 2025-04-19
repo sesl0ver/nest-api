@@ -32,3 +32,11 @@ export interface price {
     regularPrice: number; // 원래 가격
     cut: number; // 현재 할인율
 }
+
+export interface steamGamePage {
+    totalCount: number,
+    totalPages: number,
+    currentPage: number,
+    pageSize: number,
+    games: steamGame[],
+}

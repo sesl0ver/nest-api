@@ -1,7 +1,10 @@
-import {Controller, Get, Post, Param, Req, Body, Put, Delete} from '@nestjs/common';
+import {Controller, Get, Post, Param, Query, Body, UploadedFiles, UseInterceptors} from '@nestjs/common';
 import {GamesService} from "./games.service";
-import {priceOverview, steamGame} from "../entities/game.entity";
+import {steamGame, steamGamePage} from "../entities/game.entity";
 import {GamePostService} from "../gamepost/gamePost.service";
+import { multerOptions } from "../common/multer.config";
+import {FilesInterceptor} from "@nestjs/platform-express";
+import {postData} from "../dto/post-data.dto";
 
 @Controller('games')
 export class GamesController {
@@ -9,13 +12,8 @@ export class GamesController {
     }
 
     @Get()
-    async getGames():Promise<steamGame[]> {
-        return this.gamesService.getGames();
-    }
-
-    @Get('/posts/:game_id')
-    findPostGame(@Param('game_id') game_id: string) {
-        return this.gamePostService.findByGame(Number(game_id));
+    async getGames(@Query('page') page: string):Promise<steamGamePage> {
+        return this.gamesService.getGames(page);
     }
 
     @Get(':appid')
@@ -23,14 +21,25 @@ export class GamesController {
         return this.gamesService.getGame(appid);
     }
 
-    @Post('/post')
-    createPost(@Body() dto: any) {
-        return this.gamePostService.createPost(dto);
+    @Get('/posts/:appid')
+    findPostGame(@Param('appid') appid: string, @Query('page') page: string) {
+        return this.gamePostService.findByGame(Number(appid), page);
+    }
+
+    @Get('/read/:post_id')
+    readPostGame(@Param('post_id') post_id: string) {
+        return this.gamePostService.readPostGame(Number(post_id));
     }
 
     @Post(':appid')
     async createSteamGame(@Param('appid') appid: number): Promise<void> {
         await this.gamesService.createGame(appid);
+    }
+
+    @Post('/post')
+    @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
+    createPost(@Body() dto: postData, @UploadedFiles() files: Express.Multer.File[]) {
+        return this.gamePostService.createPost(dto, files);
     }
 
     /*@Get(':id')

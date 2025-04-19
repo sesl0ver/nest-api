@@ -1,18 +1,50 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {Decimal} from "decimal.js";
+import {postData} from "../dto/post-data.dto";
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class GamePostService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService, private readonly configService: ConfigService) {}
 
-    async createPost(dto: {
-        title: string,
-        contents: string,
-        port_type: 'GUIDE' | 'REVIEW' | 'TIP' | 'QUESTION',
-        author_id: number,
-        app_id: number
-    }) {
-        return this.prisma.games_post.create({ data: dto });
+    async createPost(dto: postData, files: Express.Multer.File[]) {
+        let update_content = dto.contents
+        if (typeof dto.prevUrl === 'string') {
+            for (const file of files) {
+                update_content = update_content.replaceAll(dto.prevUrl, `${this.configService.get<string>('NEST_API_CLIENT_IMAGE_URL')}/${file.filename}`);
+            }
+        } else if (typeof dto.prevUrl === 'object') {
+            for (const [index, file] of files.entries()) {
+                update_content = update_content.replaceAll(dto.prevUrl[index], `${this.configService.get<string>('NEST_API_CLIENT_IMAGE_URL')}/${file.filename}`);
+            }
+        }
+
+        const res = await this.prisma.games_post.create({ data: {
+                title: dto.title,
+                contents: update_content,
+                post_type: dto.post_type,
+                author_id: Number(dto.author_id),
+                app_id: Number(dto.app_id),
+            }
+        });
+
+        for (const file of files) {
+            const relativePath = file.path.replace(process.cwd(), '');
+            await this.prisma.uploaded_file.create({
+                data: {
+                    original_name: file.originalname,
+                    filename: file.filename,
+                    path: relativePath,
+                    size: file.size,
+                    mime_type: file.mimetype,
+                    post_id: res.post_id
+                }
+            });
+        }
+        return {
+            success: true,
+        }
     }
 
     async findPostAll() {
@@ -40,9 +72,20 @@ export class GamePostService {
         });
     }
 
-    async findByGame(game_id: number) {
-        return this.prisma.games_post.findMany({
+    async findByGame(game_id: number , page: string) {
+        let _page = new Decimal(page ?? '1')
+        _page = (_page.isInteger()) ? _page : Decimal(1);
+        const pageSize = 20;
+        const skip = (_page.toNumber() - 1) * pageSize;
+        const totalCount = await this.prisma.games_post.count({
+            where: {
+                app_id: game_id,
+            },
+        });
+        const posts = await this.prisma.games_post.findMany({
             where: { app_id: game_id },
+            skip: skip, // offset
+            take: pageSize,
             orderBy: { created_date: 'desc' },
             include: {
                 author: {
@@ -64,16 +107,33 @@ export class GamePostService {
                 }
             },
         });
+        return {
+            totalCount: totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            currentPage: _page.toNumber(),
+            pageSize: pageSize,
+            posts: posts
+        }
     }
 
-    async findOne(id: number) {
+    async readPostGame(id: number) {
         return this.prisma.games_post.findUnique({
             where: { post_id: id },
             include: {
-                comments: true,
-                author: true,
-                game: true,
-            }
+                author: {
+                    select: {
+                        account_id: true,
+                        username: true
+                    }
+                },
+                game: {
+                    select: {
+                        app_id: true,
+                        title: true
+                    }
+                },
+                comments: false
+            },
         });
     }
 
