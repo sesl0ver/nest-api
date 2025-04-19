@@ -10,11 +10,11 @@ export class postData {
     @IsString()
     readonly post_type: 'GUIDE' | 'REVIEW' | 'TIP' | 'QUESTION' | 'TALK' | 'NOTICE';
 
-    @IsNumber()
-    readonly author_id: number;
+    @IsString()
+    readonly author_id: string;
 
-    @IsNumber()
-    readonly app_id: number;
+    @IsString()
+    readonly app_id: string;
 
     @IsOptional()
     @IsString({ each: true })

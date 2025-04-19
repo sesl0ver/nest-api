@@ -2,7 +2,7 @@ import {Injectable, NotFoundException} from '@nestjs/common';
 import {RedisService} from "./redis.service";
 import {AxiosService} from "./axios.service";
 import { config } from "dotenv";
-import {priceOverview} from "../entities/game.entity";
+import {Price} from "../entities/game.entity";
 
 @Injectable()
 export class DealService {
@@ -19,52 +19,37 @@ export class DealService {
         return res.data.game.id;
     }
 
-    async fetchPriceOverview(appId: string): Promise<priceOverview> {
+    async fetchPriceOverview(appId: string): Promise<Price> {
         const appKey = `steam:deal:${appId}`;
         let dealData = await this.redis.get(appKey);
         if (! dealData) {
             const dealId = await this.fetchDealID(appId);
             if (! dealId) {
-                return {
-                    success: false,
-                    data: null
-                };
+                return {};
             }
             const dealRes = await this.AxiosService.post(`${this.apiUrl}/games/overview/v2?key=${process.env.NEST_API_DEAL_KEY}&country=KR&shops=61`,[dealId]);
             if (! dealRes?.data) {
-                return {
-                    success: false,
-                    data: null
-                };
+                return {};
             }
             dealData = dealRes.data['prices'];
             await this.redis.set(appKey, JSON.stringify(dealData), 43200); // 12시간 마다 갱신
         } else {
             dealData = JSON.parse(dealData);
             if (! dealData) {
-                return {
-                    success: false,
-                    data: null
-                };
+                return {};
             }
         }
         if (!dealData || dealData?.length < 1) {
-            return {
-                success: false,
-                data: null
-            }
+            return {}
         }
         const price = dealData[0];
         return {
-            success: true,
-            data: (! price) ? null : {
-                id: price?.['id'] ?? "",
-                lowPrice: price?.['lowest']['price']['amountInt'] ?? 0,
-                lowCut: price?.['lowest']['cut'] ?? 0,
-                currentPrice: price?.['current']['price']['amountInt'] ?? 0,
-                regularPrice: price?.['current']['regular']['amountInt'] ?? 0,
-                cut: price?.['current']['cut'] ?? 0,
-            }
+            id: price?.['id'] ?? "",
+            lowPrice: price?.['lowest']['price']['amountInt'] ?? 0,
+            lowCut: price?.['lowest']['cut'] ?? 0,
+            currentPrice: price?.['current']['price']['amountInt'] ?? 0,
+            regularPrice: price?.['current']['regular']['amountInt'] ?? 0,
+            cut: price?.['current']['cut'] ?? 0,
         };
     }
 }

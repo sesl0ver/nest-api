@@ -1,6 +1,6 @@
 import {Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
-import {steamGame, priceOverview, steamGamePage} from "../entities/game.entity";
+import {steamGame, steamGamePage, Price} from "../entities/game.entity";
 import {SteamService} from "../common/steam.service";
 import {DealService} from "../common/deal.service";
 import {Decimal} from "decimal.js";
@@ -121,7 +121,7 @@ export class GamesService {
         });
     }
 
-    async getPrice (appid: number): Promise<priceOverview> {
-        return this.dealService.fetchPriceOverview(String(appid));
+    async getPrice (appid: string): Promise<Price> {
+        return this.dealService.fetchPriceOverview(appid);
     }
 }

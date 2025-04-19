@@ -4,6 +4,8 @@ import {ValidationPipe} from "@nestjs/common";
 import * as process from "node:process";
 import * as bodyParser from 'body-parser';
 import { config } from "dotenv";
+import {ResponseInterceptor} from "./common/response.interceptor";
+import {GlobalExceptionFilter} from "./common/exception.filter";
 
 async function bootstrap() {
   config()
@@ -21,6 +23,9 @@ async function bootstrap() {
 
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+  app.useGlobalInterceptors(new ResponseInterceptor());
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   await app.listen(process.env.PORT ?? 3333);
 }

@@ -5,6 +5,7 @@ import {GamePostService} from "../gamepost/gamePost.service";
 import { multerOptions } from "../common/multer.config";
 import {FilesInterceptor} from "@nestjs/platform-express";
 import {postData} from "../dto/post-data.dto";
+import {DealService} from "../common/deal.service";
 
 @Controller('games')
 export class GamesController {
@@ -31,15 +32,20 @@ export class GamesController {
         return this.gamePostService.readPostGame(Number(post_id));
     }
 
-    @Post(':appid')
-    async createSteamGame(@Param('appid') appid: number): Promise<void> {
-        await this.gamesService.createGame(appid);
+    @Get('/price/:id')
+    getPrice(@Param('id') id: string) {
+        return this.gamesService.getPrice(id);
     }
 
     @Post('/post')
     @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
     createPost(@Body() dto: postData, @UploadedFiles() files: Express.Multer.File[]) {
         return this.gamePostService.createPost(dto, files);
+    }
+
+    @Post(':appid')
+    async createSteamGame(@Param('appid') appid: number): Promise<void> {
+        await this.gamesService.createGame(appid);
     }
 
     /*@Get(':id')

@@ -9,6 +9,7 @@ export class GamePostService {
     constructor(private readonly prisma: PrismaService, private readonly configService: ConfigService) {}
 
     async createPost(dto: postData, files: Express.Multer.File[]) {
+        // TODO 이미지 포멧 체크 필요. 이미지 JPG, GIF, PNG, WEBP 만 업로드 가능.
         let update_content = dto.contents
         if (typeof dto.prevUrl === 'string') {
             for (const file of files) {
@@ -29,18 +30,20 @@ export class GamePostService {
             }
         });
 
-        for (const file of files) {
-            const relativePath = file.path.replace(process.cwd(), '');
-            await this.prisma.uploaded_file.create({
-                data: {
-                    original_name: file.originalname,
-                    filename: file.filename,
-                    path: relativePath,
-                    size: file.size,
-                    mime_type: file.mimetype,
-                    post_id: res.post_id
-                }
-            });
+        if (files) {
+            for (const file of files) {
+                const relativePath = file.path.replace(process.cwd(), '');
+                await this.prisma.uploaded_file.create({
+                    data: {
+                        original_name: file.originalname,
+                        filename: file.filename,
+                        path: relativePath,
+                        size: file.size,
+                        mime_type: file.mimetype,
+                        post_id: res.post_id
+                    }
+                });
+            }
         }
         return {
             success: true,
