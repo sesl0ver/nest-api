@@ -4,8 +4,8 @@ import {ValidationPipe} from "@nestjs/common";
 import * as process from "node:process";
 import * as bodyParser from 'body-parser';
 import { config } from "dotenv";
-import {ResponseInterceptor} from "./common/response.interceptor";
-import {GlobalExceptionFilter} from "./common/exception.filter";
+import {ResponseInterceptor} from "./lib/response.interceptor";
+import {GlobalExceptionFilter} from "./lib/exception.filter";
 
 async function bootstrap() {
   config()

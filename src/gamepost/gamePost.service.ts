@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {BadRequestException, Injectable} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {Decimal} from "decimal.js";
 import {postData} from "../dto/post-data.dto";
 import { ConfigService } from '@nestjs/config';
+import { isValidInput, isValidXss } from '../lib/utils';
 
 @Injectable()
 export class GamePostService {
@@ -21,9 +22,19 @@ export class GamePostService {
             }
         }
 
+        // 태그 검사
+        const _title = isValidXss(dto.title, {ALLOWED_TAGS: []});
+        const _contents = isValidXss(update_content, {ALLOWED_TAGS: []});
+        if (! isValidInput(_title)) {
+            throw new BadRequestException('제목을 입력해주세요.');
+        }
+        if (! isValidInput(_contents)) {
+            throw new BadRequestException('내용을 입력해주세요.');
+        }
+
         const res = await this.prisma.games_post.create({ data: {
-                title: dto.title,
-                contents: update_content,
+                title: _title,
+                contents: _contents,
                 post_type: dto.post_type,
                 author_id: Number(dto.author_id),
                 app_id: Number(dto.app_id),
@@ -44,9 +55,6 @@ export class GamePostService {
                     }
                 });
             }
-        }
-        return {
-            success: true,
         }
     }
 
