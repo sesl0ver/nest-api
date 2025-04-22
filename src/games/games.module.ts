@@ -3,7 +3,7 @@ import {GamesService} from './games.service';
 import {GamesController} from './games.controller';
 import {SteamService} from "../common/steam.service";
 import {DealService} from "../common/deal.service";
-import {GamePostService} from "../gamepost/gamePost.service";
+import {GamePostService} from "./gamePost.service";
 
 @Module({
   imports: [],

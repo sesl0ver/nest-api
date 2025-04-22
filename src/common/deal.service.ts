@@ -19,11 +19,11 @@ export class DealService {
         return res.data.game.id;
     }
 
-    async fetchPriceOverview(appId: string): Promise<Price> {
-        const appKey = `steam:deal:${appId}`;
+    async fetchPriceOverview(game_id: string): Promise<Price> {
+        const appKey = `steam:deal:${game_id}`;
         let dealData = await this.redis.get(appKey);
         if (! dealData) {
-            const dealId = await this.fetchDealID(appId);
+            const dealId = await this.fetchDealID(game_id);
             if (! dealId) {
                 return {};
             }

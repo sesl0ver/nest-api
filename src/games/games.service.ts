@@ -121,7 +121,7 @@ export class GamesService {
         });
     }
 
-    async getPrice (appid: string): Promise<Price> {
-        return this.dealService.fetchPriceOverview(appid);
+    async getPrice (game_id: string): Promise<Price> {
+        return this.dealService.fetchPriceOverview(game_id);
     }
 }

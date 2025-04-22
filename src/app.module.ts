@@ -10,7 +10,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./common/redis.module";
 import { AxiosModule } from "./common/axios.module";
 import { GamesModule } from "./games/games.module";
-import { GamePostModule } from './gamepost/gamePost.module';
+import { GamePostModule } from './games/gamePost.module';
 import { ImageModule } from './image/image.module';
 import {FileModule} from "./common/fileClieanup.module";
 
