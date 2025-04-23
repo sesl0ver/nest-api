@@ -2,6 +2,10 @@ import { Type } from 'class-transformer';
 import {IsNotEmpty, IsOptional, IsString} from "class-validator";
 
 export class postData {
+    @IsOptional()
+    @IsString()
+    readonly post_id: string;
+
     @IsNotEmpty()
     @IsString()
     readonly title: string;

@@ -48,6 +48,12 @@ export class GamesController {
         await this.gamesService.createGame(appid);
     }
 
+    @Put('/games/:game_id/posts')
+    @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
+    updatePost(@Param('game_id') game_id: string, @Body() dto: postData, @UploadedFiles() files: Express.Multer.File[]) {
+        return this.gamePostService.createPost(game_id, dto, files);
+    }
+
     @Delete('/games/posts/:post_id')
     removeGamePost(@Param('post_id') post_id: string) {
         return this.gamePostService.removeGamePost(post_id);

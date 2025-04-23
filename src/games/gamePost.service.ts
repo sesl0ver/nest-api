@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { isValidInput, isValidXss } from '../lib/utils';
 import * as fs from 'fs';
 import * as path from 'path';
+import {GamePost} from "../types/GamePost";
 
 /*
 입력 오류: BadRequestException (400)
@@ -43,15 +44,31 @@ export class GamePostService {
 
         try {
             await this.prisma.$transaction(async (tx) => {
-                const post = await tx.games_post.create({
-                    data: {
-                        title: _title,
-                        contents: _contents,
-                        post_type: dto.post_type,
-                        author_id: Number(dto.author_id),
-                        app_id: Number(game_id),
-                    },
-                });
+                let post: GamePost;
+                if (!dto.post_id) {
+                    post = await tx.games_post.create({
+                        data: {
+                            title: _title,
+                            contents: _contents,
+                            post_type: dto.post_type,
+                            author_id: Number(dto.author_id),
+                            app_id: Number(game_id),
+                        },
+                    });
+                } else {
+                    post = await tx.games_post.update({
+                        where: {
+                            post_id: Number(dto.post_id)
+                        },
+                        data: {
+                            title: _title,
+                            contents: _contents,
+                            post_type: dto.post_type,
+                            author_id: Number(dto.author_id),
+                            app_id: Number(game_id),
+                        },
+                    });
+                }
 
                 if (files && files.length > 0) {
                     const relativeFiles = files.map((file) => ({
@@ -182,13 +199,6 @@ export class GamePostService {
                 },
                 comments: false
             },
-        });
-    }
-
-    async update(id: number, dto: Partial<{ title: string, contents: string, port_type: 'GUIDE' | 'REVIEW' | 'TIP' | 'QUESTION' }>) {
-        return this.prisma.games_post.update({
-            where: { post_id: id },
-            data: dto,
         });
     }
 
