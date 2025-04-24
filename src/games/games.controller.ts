@@ -54,8 +54,8 @@ export class GamesController {
         return this.gamePostService.createPost(game_id, dto, files);
     }
 
-    @Delete('/games/posts/:post_id')
-    removeGamePost(@Param('post_id') post_id: string) {
+    @Delete('/games/:game_id/posts')
+    removeGamePost(@Query('post_id') post_id: string) {
         return this.gamePostService.removeGamePost(post_id);
     }
 

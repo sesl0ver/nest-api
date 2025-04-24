@@ -43,7 +43,7 @@ export class GamePostService {
         }
 
         try {
-            await this.prisma.$transaction(async (tx) => {
+            return this.prisma.$transaction(async (tx) => {
                 let post: GamePost;
                 if (!dto.post_id) {
                     post = await tx.games_post.create({
@@ -83,7 +83,7 @@ export class GamePostService {
                     await tx.uploaded_file.createMany({ data: relativeFiles });
                 }
 
-                return post;
+                return { post_id: post.post_id };
             });
         } catch (e) {
             // 업로드 된 파일 확인 및 삭제
@@ -211,7 +211,7 @@ export class GamePostService {
     async removeGamePost (post_id: string) {
         try {
             await this.prisma.$transaction(async (tx) => {
-                const remove = await tx.games_post.delete({
+                const remove = await tx.games_post.findUnique({
                     where: { post_id: Number(post_id) },
                     include: {
                         author: {
@@ -231,19 +231,25 @@ export class GamePostService {
                     },
                 });
 
+                if (! remove) {
+                    throw new NotFoundException('이미 삭제되었거나 존재하지 않는 게시물입니다.');
+                }
+
                 if (remove.files && remove.files.length > 0) {
                     const remove_file_id = remove.files.map(file => file.file_id);
-                    await this.prisma.games_post.deleteMany({
+                    await this.prisma.uploaded_file.deleteMany({
                         where: {
-                            post_id: { in: remove_file_id },
+                            file_id: { in: remove_file_id },
                         },
                     });
 
                     // 실제 파일 정리
                     for (const file of remove.files) {
-                        await fs.promises.unlink(file.path);
+                        const absolutePath = path.join(process.cwd(), file.path);
+                        await fs.promises.unlink(absolutePath);
                     }
                 }
+                await tx.games_post.delete({ where: { post_id: Number(post_id) } });
             });
         } catch (e) {
             // 오류 처리
