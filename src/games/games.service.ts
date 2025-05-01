@@ -79,8 +79,8 @@ export class GamesService {
         }
     }
 
-    async createGame (appid: number): Promise<void> {
-        const res = await this.steamService.fetchDetails(appid);
+    async createGame (game_id: number): Promise<void> {
+        const res = await this.steamService.fetchDetails(game_id);
         await this.prisma.games.upsert({
             where: {
                 app_id: res.app_id

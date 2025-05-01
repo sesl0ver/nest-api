@@ -1,11 +1,15 @@
-import {Controller, Get, Post, Put, Delete, Param, Query, Body, UploadedFiles, UseInterceptors} from '@nestjs/common';
+import {
+    Controller, Get, Post, Put, Delete, Param, Query,
+    Body, UploadedFiles, UseInterceptors, UseGuards, Request
+} from '@nestjs/common';
 import {GamesService} from "./games.service";
 import {steamGame, steamGamePage} from "../entities/game.entity";
 import {GamePostService} from "./gamePost.service";
 import { multerOptions } from "../common/multer.config";
 import {FilesInterceptor} from "@nestjs/platform-express";
 import {postData} from "../dto/post-data.dto";
-import {DealService} from "../common/deal.service";
+import {CookieAuthGuard} from "../auth/cookieAuth.guard";
+import {Account} from "../types/Account";
 
 @Controller('api')
 export class GamesController {
@@ -37,45 +41,39 @@ export class GamesController {
         return this.gamesService.getPrice(game_id);
     }
 
+    @UseGuards(CookieAuthGuard)
     @Post('/games/:game_id/posts')
     @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
-    createPost(@Param('game_id') game_id: string, @Body() dto: postData, @UploadedFiles() files: Express.Multer.File[]) {
-        return this.gamePostService.createPost(game_id, dto, files);
+    createPost(@Param('game_id') game_id: string, @Body() dto: postData, @UploadedFiles() files: Express.Multer.File[], @Request() req: { user: Account }) {
+        return this.gamePostService.createPost(game_id, dto, files, req.user.account_id);
     }
 
-    @Post('/games/:appid')
-    async createSteamGame(@Param('appid') appid: number): Promise<void> {
-        await this.gamesService.createGame(appid);
+    @Post('/games/:game_id')
+    async createSteamGame(@Param('game_id') game_id: number): Promise<void> {
+        await this.gamesService.createGame(game_id);
     }
 
+    @UseGuards(CookieAuthGuard)
+    @Post('/games/posts/like/:post_id')
+    likePost(@Param('post_id') post_id: string, @Request() req: { user: Account }) {
+        return this.gamePostService.likePost(post_id, req.user.account_id);
+    }
+
+    @UseGuards(CookieAuthGuard)
     @Put('/games/:game_id/posts')
     @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
-    updatePost(@Param('game_id') game_id: string, @Body() dto: postData, @UploadedFiles() files: Express.Multer.File[]) {
-        return this.gamePostService.createPost(game_id, dto, files);
+    updatePost(@Param('game_id') game_id: string, @Body() dto: postData, @UploadedFiles() files: Express.Multer.File[], @Request() req: { user: Account }) {
+        return this.gamePostService.createPost(game_id, dto, files, req.user.account_id);
     }
-
+    @UseGuards(CookieAuthGuard)
     @Delete('/games/:game_id/posts')
-    removeGamePost(@Query('post_id') post_id: string) {
-        return this.gamePostService.removeGamePost(post_id);
+    removeGamePost(@Query('post_id') post_id: string, @Request() req: { user: Account }) {
+        return this.gamePostService.removeGamePost(post_id, req.user.account_id);
     }
 
+    @UseGuards(CookieAuthGuard)
     @Delete('/games/posts/:post_id/files/:file_id')
-    removePostFile(@Param('post_id') post_id: string, @Param('file_id') file_id: string) {
-        return this.gamePostService.removePostFile(post_id, file_id);
+    removePostFile(@Param('post_id') post_id: string, @Param('file_id') file_id: string, @Request() req: { user: Account }) {
+        return this.gamePostService.removePostFile(post_id, file_id, String(req.user.account_id));
     }
-
-    /*@Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.gamePostService.findOne(Number(id));
-    }
-
-    @Put(':id')
-    update(@Param('id') id: string, @Body() dto: any) {
-        return this.gamePostService.update(Number(id), dto);
-    }
-
-    @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.gamePostService.remove(Number(id));
-    }*/
 }

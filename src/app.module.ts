@@ -12,7 +12,8 @@ import { AxiosModule } from "./common/axios.module";
 import { GamesModule } from "./games/games.module";
 import { GamePostModule } from './games/gamePost.module';
 import { ImageModule } from './image/image.module';
-import {FileModule} from "./common/fileClieanup.module";
+import {AuthModule} from "./auth/auth.module";
+import { AccountModule } from './account/account.module';
 
 @Module({
   imports: [
@@ -27,8 +28,8 @@ import {FileModule} from "./common/fileClieanup.module";
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
-    ScheduleModule.forRoot(), FileModule,
-    SteamModule, DealModule, PrismaModule, RedisModule, AxiosModule, GamesModule, GamePostModule, ImageModule],
+    ScheduleModule.forRoot(), AuthModule, AccountModule,
+    SteamModule, DealModule, PrismaModule, RedisModule, AxiosModule, GamesModule, GamePostModule, ImageModule, AccountModule],
   controllers: [AppController],
   providers: [],
 })

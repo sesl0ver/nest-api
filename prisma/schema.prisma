@@ -16,32 +16,35 @@ datasource db {
 }
 
 model account {
-  account_id Int             @id @default(autoincrement())
-  username   String          @unique
-  password   String
-  posts      games_post[]
-  comments   games_comment[]
-  created_date  DateTime        @default(now())
+  account_id    Int                @id @default(autoincrement())
+  steam_id      String             @unique @db.VarChar
+  username      String             @unique @db.VarChar
+  avatar        String             @db.VarChar
+  password      String
+  posts         games_post[]
+  comments      games_comment[]
+  likes         games_post_like[]  @relation("AccountLikes")
+  created_date  DateTime           @default(now())
 }
 
 model games {
-  app_id               Int       @id
-  title                String    @db.VarChar
+  app_id               Int          @id
+  title                String       @db.VarChar
   short_description    String
   detailed_description String?
   about_the_game       String?
-  header_image         String    @db.VarChar
-  capsule_image        String    @db.VarChar
-  release_date         String    @db.VarChar
-  developers           String[]  @db.VarChar
-  publishers           String[]  @db.VarChar
-  genres               String[]  @db.VarChar
+  header_image         String       @db.VarChar
+  capsule_image        String       @db.VarChar
+  release_date         String       @db.VarChar
+  developers           String[]     @db.VarChar
+  publishers           String[]     @db.VarChar
+  genres               String[]     @db.VarChar
   screenshots          String[]
   screenshots_full     String[]
   movies               String[]
   movies_full          String[]
-  create_date          DateTime  @default(now()) @db.Timestamptz
-  update_date          DateTime? @db.Timestamptz @updatedAt
+  create_date          DateTime     @default(now()) @db.Timestamptz
+  update_date          DateTime?    @db.Timestamptz @updatedAt
   games_post           games_post[]
 }
 
@@ -64,9 +67,22 @@ model games_post {
   game         games?          @relation(fields: [app_id], references: [app_id])
   app_id       Int
   comments     games_comment[]
+  files        uploaded_file[] @relation("PostFiles") // 게시물에 첨부된 파일
+  likes        games_post_like[]
+  like_count   Int             @default(0)
   created_date DateTime        @db.Timestamptz @default(now())
   updated_date DateTime        @db.Timestamptz @updatedAt
-  files        uploaded_file[] @relation("PostFiles") // 게시물에 첨부된 파일
+}
+
+model games_post_like {
+  like_id     Int         @id @default(autoincrement())
+  post        games_post  @relation(fields: [post_id], references: [post_id])
+  post_id     Int         @unique
+  account     account     @relation("AccountLikes", fields: [account_id], references: [account_id])
+  account_id  Int
+  created_at  DateTime    @default(now())
+
+  @@unique([post_id, account_id])
 }
 
 model games_comment {

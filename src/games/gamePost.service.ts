@@ -1,4 +1,10 @@
-import {BadRequestException, InternalServerErrorException, Injectable, NotFoundException} from '@nestjs/common';
+import {
+    BadRequestException,
+    InternalServerErrorException,
+    Injectable,
+    NotFoundException,
+    ConflictException, UnauthorizedException
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {Decimal} from "decimal.js";
 import {postData} from "../dto/post-data.dto";
@@ -7,6 +13,7 @@ import { isValidInput, isValidXss } from '../lib/utils';
 import * as fs from 'fs';
 import * as path from 'path';
 import {GamePost} from "../types/GamePost";
+import {RedisService} from "../common/redis.service";
 
 /*
 입력 오류: BadRequestException (400)
@@ -18,9 +25,9 @@ import {GamePost} from "../types/GamePost";
 
 @Injectable()
 export class GamePostService {
-    constructor(private readonly prisma: PrismaService, private readonly configService: ConfigService) {}
+    constructor(private readonly prisma: PrismaService, private readonly redisService: RedisService, private readonly configService: ConfigService) {}
 
-    async createPost(game_id: string, dto: postData, files: Express.Multer.File[]) {
+    async createPost(game_id: string, dto: postData, files: Express.Multer.File[], account_id: number) {
         let update_content = dto.contents
         if (typeof dto.prevUrl === 'string') {
             for (const file of files) {
@@ -51,7 +58,7 @@ export class GamePostService {
                             title: _title,
                             contents: _contents,
                             post_type: dto.post_type,
-                            author_id: Number(dto.author_id),
+                            author_id: account_id,
                             app_id: Number(game_id),
                         },
                     });
@@ -64,7 +71,7 @@ export class GamePostService {
                             title: _title,
                             contents: _contents,
                             post_type: dto.post_type,
-                            author_id: Number(dto.author_id),
+                            author_id: account_id,
                             app_id: Number(game_id),
                         },
                     });
@@ -197,6 +204,11 @@ export class GamePostService {
                         size: true
                     }
                 },
+                _count: {
+                    select: {
+                        likes: true,
+                    }
+                },
                 comments: false
             },
         });
@@ -208,11 +220,11 @@ export class GamePostService {
         });
     }
 
-    async removeGamePost (post_id: string) {
+    async removeGamePost (post_id: string, account_id: number) {
         try {
             await this.prisma.$transaction(async (tx) => {
                 const remove = await tx.games_post.findUnique({
-                    where: { post_id: Number(post_id) },
+                    where: { post_id: Number(post_id), author_id: account_id },
                     include: {
                         author: {
                             select: {
@@ -230,7 +242,6 @@ export class GamePostService {
                         comments: false
                     },
                 });
-
                 if (! remove) {
                     throw new NotFoundException('이미 삭제되었거나 존재하지 않는 게시물입니다.');
                 }
@@ -249,17 +260,26 @@ export class GamePostService {
                         await fs.promises.unlink(absolutePath);
                     }
                 }
+                await tx.games_post_like.delete({ where: { post_id: Number(post_id) } });
                 await tx.games_post.delete({ where: { post_id: Number(post_id) } });
             });
         } catch (e) {
             // 오류 처리
+            console.error(e)
             throw new InternalServerErrorException(e.message);
         }
     }
 
-    async removePostFile (post_id: string, file_id: string) {
+    async removePostFile (post_id: string, file_id: string, account_id: string) {
         try {
             await this.prisma.$transaction(async (tx) => {
+                const count = await this.prisma.games_post.count({
+                    where: { post_id: Number(post_id), author_id: Number(account_id) },
+                });
+                if (count < 1) {
+                    throw new UnauthorizedException('파일 삭제 권한이 없습니다.');
+                }
+
                 const file = await tx.uploaded_file.findFirst({
                     where: {
                         file_id: Number(file_id),
@@ -282,5 +302,58 @@ export class GamePostService {
             // 오류 처리
             throw new InternalServerErrorException(e.message);
         }
+    }
+
+    async likePost (post_id: string, account_id: number): Promise<{ count: number }> {
+        const likeUserKey = `like:${post_id}:${account_id}`;
+        const likeCountKey = `like_count:${post_id}`;
+
+        const postId = Number(post_id);
+
+        // 1. Redis 먼저 체크 (중복 방지 캐시)
+        const isCached = await this.redisService.exists(likeUserKey);
+        if (isCached) {
+            throw new ConflictException("이미 좋아요를 눌렀습니다.");
+        }
+
+        // 2. DB에서 최종 중복 확인 (TTL 만료되었을 가능성 대비)
+        const alreadyLiked = await this.prisma.games_post_like.count({
+            where: {
+                post_id: postId,
+                account_id: account_id,
+            },
+        });
+
+        if (alreadyLiked > 0) {
+            await this.redisService.set(likeUserKey, "1", 60 * 60 * 24);
+            throw new ConflictException("이미 좋아요를 눌렀습니다.");
+        }
+
+        // 3. 좋아요 등록
+        // 3. 트랜잭션으로 DB 동기화 처리
+        const [, updatedPost] = await this.prisma.$transaction([
+            this.prisma.games_post_like.create({
+                data: {
+                    post_id: postId,
+                    account_id: account_id,
+                },
+            }),
+            this.prisma.games_post.update({
+                where: { post_id: postId },
+                data: {
+                    like_count: {
+                        increment: 1,
+                    },
+                },
+            }),
+        ]);
+
+        // 4. Redis 업데이트
+        await this.redisService.set(likeUserKey, "1", 60 * 60 * 24); // 중복 방지 캐시
+        if (await this.redisService.exists(likeCountKey)) {
+            await this.redisService.incr(likeCountKey);
+        }
+
+        return { count: updatedPost.like_count };
     }
 }

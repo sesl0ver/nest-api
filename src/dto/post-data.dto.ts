@@ -21,11 +21,6 @@ export class postData {
     @IsNotEmpty()
     @Type(() => String)
     @IsString()
-    readonly author_id: string;
-
-    @IsNotEmpty()
-    @Type(() => String)
-    @IsString()
     readonly app_id: string;
 
     @IsOptional()
